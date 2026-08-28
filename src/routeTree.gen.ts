@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as DonorDashboardRouteImport } from './routes/donor.dashboard'
+import { Route as DonorDonationsIndexRouteImport } from './routes/donor.donations.index'
+import { Route as DonorDonationsNewRouteImport } from './routes/donor.donations.new'
+import { Route as DonorDonationsIdEditRouteImport } from './routes/donor.donations.$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +32,93 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DonorDashboardRoute = DonorDashboardRouteImport.update({
+  id: '/donor/dashboard',
+  path: '/donor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonationsIndexRoute = DonorDonationsIndexRouteImport.update({
+  id: '/donor/donations/',
+  path: '/donor/donations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonationsNewRoute = DonorDonationsNewRouteImport.update({
+  id: '/donor/donations/new',
+  path: '/donor/donations/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonorDonationsIdEditRoute = DonorDonationsIdEditRouteImport.update({
+  id: '/donor/donations/$id/edit',
+  path: '/donor/donations/$id/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/donations/new': typeof DonorDonationsNewRoute
+  '/donor/donations/': typeof DonorDonationsIndexRoute
+  '/donor/donations/$id/edit': typeof DonorDonationsIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/donations/new': typeof DonorDonationsNewRoute
+  '/donor/donations': typeof DonorDonationsIndexRoute
+  '/donor/donations/$id/edit': typeof DonorDonationsIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/donor/dashboard': typeof DonorDashboardRoute
+  '/donor/donations/new': typeof DonorDonationsNewRoute
+  '/donor/donations/': typeof DonorDonationsIndexRoute
+  '/donor/donations/$id/edit': typeof DonorDonationsIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/donor/dashboard'
+    | '/donor/donations/new'
+    | '/donor/donations/'
+    | '/donor/donations/$id/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register'
-  id: '__root__' | '/' | '/login' | '/register'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/donor/dashboard'
+    | '/donor/donations/new'
+    | '/donor/donations'
+    | '/donor/donations/$id/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/register'
+    | '/donor/dashboard'
+    | '/donor/donations/new'
+    | '/donor/donations/'
+    | '/donor/donations/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  DonorDashboardRoute: typeof DonorDashboardRoute
+  DonorDonationsNewRoute: typeof DonorDonationsNewRoute
+  DonorDonationsIndexRoute: typeof DonorDonationsIndexRoute
+  DonorDonationsIdEditRoute: typeof DonorDonationsIdEditRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +144,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/donor/dashboard': {
+      id: '/donor/dashboard'
+      path: '/donor/dashboard'
+      fullPath: '/donor/dashboard'
+      preLoaderRoute: typeof DonorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donations/': {
+      id: '/donor/donations/'
+      path: '/donor/donations'
+      fullPath: '/donor/donations/'
+      preLoaderRoute: typeof DonorDonationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donations/new': {
+      id: '/donor/donations/new'
+      path: '/donor/donations/new'
+      fullPath: '/donor/donations/new'
+      preLoaderRoute: typeof DonorDonationsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donor/donations/$id/edit': {
+      id: '/donor/donations/$id/edit'
+      path: '/donor/donations/$id/edit'
+      fullPath: '/donor/donations/$id/edit'
+      preLoaderRoute: typeof DonorDonationsIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +179,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  DonorDashboardRoute: DonorDashboardRoute,
+  DonorDonationsNewRoute: DonorDonationsNewRoute,
+  DonorDonationsIndexRoute: DonorDonationsIndexRoute,
+  DonorDonationsIdEditRoute: DonorDonationsIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
