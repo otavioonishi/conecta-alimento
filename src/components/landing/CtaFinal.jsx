@@ -24,7 +24,7 @@ export default function CtaFinal() {
             <Link
               to="/register"
               search={{ tipo: "donor" }}
-              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-accent focus-visible:ring-offset-2 motion-reduce:transition-none"
             >
               <HandHeart className="h-4 w-4" /> Quero doar
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
@@ -32,7 +32,7 @@ export default function CtaFinal() {
             <Link
               to="/register"
               search={{ tipo: "institution" }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-7 py-3.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-green-accent/60 hover:bg-green-mist/40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-7 py-3.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-green-accent/60 hover:bg-green-mist/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-accent focus-visible:ring-offset-2 motion-reduce:transition-none"
             >
               <Building2 className="h-4 w-4" /> Sou uma instituição
             </Link>

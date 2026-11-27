@@ -8,8 +8,18 @@ export const CATEGORIAS = [
   "Refeições prontas",
   "Alimentos não perecíveis",
   "Laticínios",
-  "Outros",
+  "Brinquedos para crianças",
+  "Outros / o que quiser",
 ];
+
+// Categoria antiga ainda presente em doações já salvas no localStorage.
+export const CATEGORIAS_LEGADO = ["Outros"];
+
+export function opcoesCategoria(valorAtual) {
+  if (!valorAtual) return CATEGORIAS;
+  if (CATEGORIAS.includes(valorAtual) || !CATEGORIAS_LEGADO.includes(valorAtual)) return CATEGORIAS;
+  return [...CATEGORIAS, valorAtual];
+}
 
 export const UNIDADES = ["kg", "unidades", "litros", "caixas", "pacotes"];
 

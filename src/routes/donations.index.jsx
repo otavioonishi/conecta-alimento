@@ -1,9 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import Protected from "../components/Protected";
 import { EmptyState, StatusBadge, inputClass } from "../components/ui-basics";
-import { doacoesDisponiveis, nomeDoEstabelecimento } from "../services/donationService";
-import { CATEGORIAS, formatarData } from "../utils/format";
+import QuantityControl from "../components/QuantityControl";
+import {
+  doacoesDisponiveis,
+  nomeDoEstabelecimento,
+  ajustarQuantidade,
+} from "../services/donationService";
+import { opcoesCategoria, formatarData } from "../utils/format";
 
 export const Route = createFileRoute("/donations/")({
   head: () => ({
@@ -27,6 +33,15 @@ function ListaDoacoes() {
     setDoacoes(doacoesDisponiveis());
   }, []);
 
+  function mudarQuantidade(d, valor) {
+    const quantidade = ajustarQuantidade(d.id, valor);
+    if (quantidade === null) return;
+    setDoacoes((atual) =>
+      atual.map((item) => (item.id === d.id ? { ...item, quantity: quantidade } : item)),
+    );
+    toast.success("Quantidade atualizada.");
+  }
+
   const filtradas = useMemo(() => {
     return doacoes.filter((d) => {
       if (categoria !== "Todas" && d.category !== categoria) return false;
@@ -46,7 +61,7 @@ function ListaDoacoes() {
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-3">
         <select className={inputClass} value={categoria} onChange={(e) => setCategoria(e.target.value)}>
           <option>Todas</option>
-          {CATEGORIAS.map((c) => (
+          {opcoesCategoria(categoria).map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>
@@ -72,30 +87,34 @@ function ListaDoacoes() {
           }
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3">
           {filtradas.map((d) => (
-            <div key={d.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-foreground">{d.foodName}</p>
-                <StatusBadge status={d.status} />
+            <div key={d.id} className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="flex-1 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-foreground">{d.foodName}</p>
+                  <StatusBadge status={d.status} />
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{d.category}</p>
+                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                  <p>Estabelecimento: {nomeDoEstabelecimento(d.donorId)}</p>
+                  <p>Cidade: {d.city}</p>
+                  <p>Validade: {formatarData(d.expirationDate)}</p>
+                  <p>Retirada até: {d.pickupDeadline}</p>
+                </div>
+                <Link
+                  to="/donations/$id"
+                  params={{ id: d.id }}
+                  className="mt-4 inline-flex rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+                >
+                  Ver detalhes
+                </Link>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{d.category}</p>
-              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                <p>
-                  Quantidade: {d.quantity} {d.unit}
-                </p>
-                <p>Estabelecimento: {nomeDoEstabelecimento(d.donorId)}</p>
-                <p>Cidade: {d.city}</p>
-                <p>Validade: {formatarData(d.expirationDate)}</p>
-                <p>Retirada até: {d.pickupDeadline}</p>
-              </div>
-              <Link
-                to="/donations/$id"
-                params={{ id: d.id }}
-                className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-              >
-                Ver detalhes
-              </Link>
+              <QuantityControl
+                value={d.quantity}
+                unit={d.unit}
+                onChange={(v) => mudarQuantidade(d, v)}
+              />
             </div>
           ))}
         </div>

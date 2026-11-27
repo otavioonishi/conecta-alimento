@@ -1,9 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Package, Clock, CheckCircle2, Scale, Plus } from "lucide-react";
+import { toast } from "sonner";
 import Protected from "../components/Protected";
 import { EmptyState, StatCard, StatusBadge } from "../components/ui-basics";
-import { doacoesDoDoador, solicitacoesDoDoador, dadosDaInstituicao } from "../services/donationService";
+import QuantityControl from "../components/QuantityControl";
+import {
+  doacoesDoDoador,
+  solicitacoesDoDoador,
+  dadosDaInstituicao,
+  ajustarQuantidade,
+} from "../services/donationService";
 import { formatarData } from "../utils/format";
 
 export const Route = createFileRoute("/donor/dashboard")({
@@ -29,6 +36,15 @@ function Painel({ perfil }) {
   }, [perfil]);
 
   if (!perfil) return <p className="text-muted-foreground">Perfil do doador não encontrado.</p>;
+
+  function mudarQuantidade(d, valor) {
+    const quantidade = ajustarQuantidade(d.id, valor);
+    if (quantidade === null) return;
+    setDoacoes((atual) =>
+      atual.map((item) => (item.id === d.id ? { ...item, quantity: quantidade } : item)),
+    );
+    toast.success("Quantidade atualizada.");
+  }
 
   const disponiveis = doacoes.filter((d) => d.status === "Disponível").length;
   const aguardando = solicitacoes.filter((r) => r.status === "Aguardando").length;
@@ -77,17 +93,22 @@ function Painel({ perfil }) {
               );
               const inst = interessadas.length ? dadosDaInstituicao(interessadas[0].institutionId) : null;
               return (
-                <div key={d.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {d.foodName} — {d.quantity} {d.unit}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Criada em {formatarData(d.createdAt)}
-                      {inst ? ` • Interessada: ${inst.institutionName}` : ""}
-                    </p>
+                <div key={d.id} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex flex-1 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                    <div>
+                      <p className="font-medium text-foreground">{d.foodName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Criada em {formatarData(d.createdAt)}
+                        {inst ? ` • Interessada: ${inst.institutionName}` : ""}
+                      </p>
+                    </div>
+                    <StatusBadge status={d.status} />
                   </div>
-                  <StatusBadge status={d.status} />
+                  <QuantityControl
+                    value={d.quantity}
+                    unit={d.unit}
+                    onChange={(v) => mudarQuantidade(d, v)}
+                  />
                 </div>
               );
             })}

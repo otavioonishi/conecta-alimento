@@ -1,18 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import Protected from "../components/Protected";
 import { Campo, inputClass } from "../components/ui-basics";
+import QuantityStepper from "../components/QuantityStepper";
 import { criarDoacao } from "../services/donationService";
-import { CATEGORIAS, UNIDADES } from "../utils/format";
+import { CATEGORIAS, CATEGORIAS_LEGADO, UNIDADES, opcoesCategoria } from "../utils/format";
 
 export const Route = createFileRoute("/donor/donations/new")({
   head: () => ({
     meta: [
       { title: "Nova doação — ConectaAlimento" },
-      { name: "description", content: "Publique um alimento disponível para doação." },
+      { name: "description", content: "Publique um item disponível para doação." },
       { property: "og:title", content: "Nova doação — ConectaAlimento" },
-      { property: "og:description", content: "Publique um alimento disponível para doação." },
+      { property: "og:description", content: "Publique um item disponível para doação." },
     ],
   }),
   component: () => <Protected role="donor">{({ perfil }) => <NovaDoacao perfil={perfil} />}</Protected>,
@@ -35,11 +36,23 @@ function NovaDoacao({ perfil }) {
     city: "",
   });
 
+  useEffect(() => {
+    try {
+      const salva = sessionStorage.getItem("ca_donor_categoria");
+      if (salva && (CATEGORIAS.includes(salva) || CATEGORIAS_LEGADO.includes(salva))) {
+        setDados((atual) => ({ ...atual, category: salva }));
+      }
+      sessionStorage.removeItem("ca_donor_categoria");
+    } catch {
+      // Sem sessionStorage, o formulário simplesmente mantém o padrão.
+    }
+  }, []);
+
   const alterar = (campo) => (e) => setDados({ ...dados, [campo]: e.target.value });
 
   function enviar(e) {
     e.preventDefault();
-    if (!dados.foodName.trim()) return setErro("Informe o nome do alimento.");
+    if (!dados.foodName.trim()) return setErro("Informe o nome do item.");
     if (!dados.quantity || Number(dados.quantity) <= 0) return setErro("Informe uma quantidade válida.");
     if (!dados.expirationDate) return setErro("Informe a data de validade.");
     if (!dados.pickupDeadline) return setErro("Informe o horário limite para retirada.");
@@ -59,23 +72,23 @@ function NovaDoacao({ perfil }) {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold text-foreground">Nova doação</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Preencha as informações do alimento disponível.
+        Preencha as informações do item disponível.
       </p>
 
       <form onSubmit={enviar} className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Campo label="Nome do alimento" obrigatorio>
+          <Campo label="Nome do item" obrigatorio>
             <input className={inputClass} value={dados.foodName} onChange={alterar("foodName")} />
           </Campo>
           <Campo label="Categoria" obrigatorio>
             <select className={inputClass} value={dados.category} onChange={alterar("category")}>
-              {CATEGORIAS.map((c) => (
+              {opcoesCategoria(dados.category).map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
           </Campo>
           <Campo label="Quantidade" obrigatorio>
-            <input type="number" min="1" className={inputClass} value={dados.quantity} onChange={alterar("quantity")} />
+            <QuantityStepper value={dados.quantity} onChange={(v) => setDados({ ...dados, quantity: v })} />
           </Campo>
           <Campo label="Unidade" obrigatorio>
             <select className={inputClass} value={dados.unit} onChange={alterar("unit")}>

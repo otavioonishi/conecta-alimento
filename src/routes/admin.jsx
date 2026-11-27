@@ -1,18 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Building2, HandHeart, Package, CheckCircle2, Inbox, Scale } from "lucide-react";
-import { toast } from "sonner";
+import { AlertTriangle, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
 import Protected from "../components/Protected";
-import { StatCard } from "../components/ui-basics";
-import {
-  getUsers,
-  saveUsers,
-  getDonors,
-  getInstitutions,
-  getDonations,
-  getRequests,
-} from "../services/storageService";
-import { formatarData } from "../utils/format";
+import AdminOverview from "../components/admin/AdminOverview";
+import AdminUsers from "../components/admin/AdminUsers";
+import AdminDonations from "../components/admin/AdminDonations";
+import AdminRequests from "../components/admin/AdminRequests";
+import AdminAlerts from "../components/admin/AdminAlerts";
+
+const ABAS = [
+  { id: "visao-geral", titulo: "Visão geral", icone: LayoutDashboard, conteudo: AdminOverview },
+  { id: "usuarios", titulo: "Usuários", icone: Users, conteudo: AdminUsers },
+  { id: "doacoes", titulo: "Doações", icone: Package, conteudo: AdminDonations },
+  { id: "solicitacoes", titulo: "Solicitações", icone: Inbox, conteudo: AdminRequests },
+  { id: "alertas", titulo: "Alertas", icone: AlertTriangle, conteudo: AdminAlerts },
+];
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -27,92 +29,54 @@ export const Route = createFileRoute("/admin")({
 });
 
 function Admin() {
-  const [dados, setDados] = useState(null);
+  const [abaAtiva, setAbaAtiva] = useState("visao-geral");
+  const [versao, setVersao] = useState(0);
 
-  function carregar() {
-    setDados({
-      users: getUsers(),
-      donors: getDonors(),
-      institutions: getInstitutions(),
-      donations: getDonations(),
-      requests: getRequests(),
-    });
-  }
+  useEffect(() => {
+    const sincronizar = () => setVersao((v) => v + 1);
+    window.addEventListener("ca:doacoes-atualizadas", sincronizar);
+    return () => window.removeEventListener("ca:doacoes-atualizadas", sincronizar);
+  }, []);
 
-  useEffect(carregar, []);
-
-  if (!dados) return <p className="text-muted-foreground">Carregando...</p>;
-
-  const concluidas = dados.donations.filter((d) => d.status === "Concluída");
-  const totalAlimentos = concluidas.reduce((s, d) => s + Number(d.quantity || 0), 0);
-
-  function alternarBloqueio(id) {
-    const users = getUsers().map((u) => (u.id === id ? { ...u, blocked: !u.blocked } : u));
-    saveUsers(users);
-    carregar();
-    toast.success("Situação do usuário atualizada.");
-  }
-
-  function remover(id) {
-    if (!window.confirm("Deseja remover este usuário?")) return;
-    saveUsers(getUsers().filter((u) => u.id !== id));
-    carregar();
-    toast.success("Usuário removido.");
-  }
+  const aba = ABAS.find((item) => item.id === abaAtiva) || ABAS[0];
+  const Conteudo = aba.conteudo;
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold text-foreground">Administração</h1>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard icone={<HandHeart className="h-5 w-5" />} titulo="Doadores" valor={dados.donors.length} />
-        <StatCard icone={<Building2 className="h-5 w-5" />} titulo="Instituições" valor={dados.institutions.length} />
-        <StatCard icone={<Package className="h-5 w-5" />} titulo="Doações cadastradas" valor={dados.donations.length} />
-        <StatCard icone={<CheckCircle2 className="h-5 w-5" />} titulo="Doações concluídas" valor={concluidas.length} />
-        <StatCard icone={<Inbox className="h-5 w-5" />} titulo="Solicitações" valor={dados.requests.length} />
-        <StatCard icone={<Scale className="h-5 w-5" />} titulo="Alimentos destinados (aprox.)" valor={totalAlimentos} />
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Administração</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Acompanhe a plataforma e gerencie usuários, doações e solicitações.
+        </p>
       </div>
 
-      <section>
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Usuários</h2>
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-border text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">E-mail</th>
-                <th className="px-4 py-3 font-medium">Perfil</th>
-                <th className="px-4 py-3 font-medium">Cadastro</th>
-                <th className="px-4 py-3 font-medium">Situação</th>
-                <th className="px-4 py-3 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dados.users.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 text-foreground">{u.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {u.role === "donor" ? "Doador" : u.role === "institution" ? "Instituição" : "Admin"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatarData(u.createdAt)}</td>
-                  <td className="px-4 py-3">{u.blocked ? "Bloqueado" : "Ativo"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => alternarBloqueio(u.id)} className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary">
-                        {u.blocked ? "Desbloquear" : "Bloquear"}
-                      </button>
-                      <button onClick={() => remover(u.id)} className="rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10">
-                        Remover
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <nav className="flex flex-wrap gap-2" aria-label="Seções da administração">
+        {ABAS.map((item) => {
+          const Icone = item.icone;
+          const ativa = item.id === abaAtiva;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={ativa}
+              onClick={() => setAbaAtiva(item.id)}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                ativa
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "border border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
+              }`}
+            >
+              <Icone className="h-4 w-4" />
+              {item.titulo}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div role="tabpanel" aria-label={aba.titulo}>
+        <Conteudo key={`${aba.id}-${versao}`} />
+      </div>
     </div>
   );
 }

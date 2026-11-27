@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Package, Clock, CheckCircle2, Search } from "lucide-react";
+import { toast } from "sonner";
 import Protected from "../components/Protected";
 import { EmptyState, StatCard, StatusBadge } from "../components/ui-basics";
+import QuantityControl from "../components/QuantityControl";
 import {
   doacaoPorId,
   doacoesDisponiveis,
   solicitacoesDaInstituicao,
+  ajustarQuantidade,
 } from "../services/donationService";
 import { formatarData } from "../utils/format";
 
@@ -35,6 +38,14 @@ function Painel({ perfil }) {
   }, [perfil]);
 
   if (!perfil) return <p className="text-muted-foreground">Perfil da instituição não encontrado.</p>;
+
+  function mudarQuantidade(d, valor) {
+    const quantidade = ajustarQuantidade(d.id, valor);
+    if (quantidade === null) return;
+    setSolicitacoes((atual) => [...atual]);
+    setDisponiveis((atual) => [...atual]);
+    toast.success("Quantidade atualizada.");
+  }
 
   const aguardando = solicitacoes.filter((r) => r.status === "Aguardando").length;
   const concluidas = solicitacoes.filter((r) => r.status === "Concluída").length;
@@ -77,14 +88,25 @@ function Painel({ perfil }) {
             {solicitacoes.slice(0, 5).map((r) => {
               const d = doacaoPorId(r.donationId);
               return (
-                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {d ? `${d.foodName} — ${d.quantity} ${d.unit}` : "Doação removida"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Solicitado em {formatarData(r.createdAt)}</p>
+                <div key={r.id} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex flex-1 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {d ? d.foodName : "Doação removida"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Solicitado em {formatarData(r.createdAt)}</p>
+                    </div>
+                    <StatusBadge status={r.status} />
                   </div>
-                  <StatusBadge status={r.status} />
+                  {d ? (
+                    <QuantityControl
+                      value={d.quantity}
+                      unit={d.unit}
+                      onChange={(v) => mudarQuantidade(d, v)}
+                    />
+                  ) : (
+                    <div className="hidden w-36 shrink-0 sm:block" />
+                  )}
                 </div>
               );
             })}

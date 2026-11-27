@@ -8,7 +8,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { Scale, HandHeart, Package, Clock, Building2 } from "lucide-react";
+import { HandHeart, Package, Building2, Users } from "lucide-react";
 import { StatCard } from "../../components/ui-basics";
 import { kpis, ultimasAtividades } from "../../services/adminService";
 import { formatarData } from "../../utils/format";

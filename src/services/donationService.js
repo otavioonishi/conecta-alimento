@@ -38,7 +38,7 @@ export function criarDoacao(donorId, dados) {
     donorId,
     foodName: dados.foodName,
     category: dados.category,
-    quantity: Number(dados.quantity),
+    quantity: Math.max(1, Math.floor(Number(dados.quantity) || 1)),
     unit: dados.unit,
     expirationDate: dados.expirationDate,
     pickupDeadline: dados.pickupDeadline,
@@ -54,9 +54,27 @@ export function criarDoacao(donorId, dados) {
 }
 
 export function atualizarDoacao(id, dados) {
-  saveDonations(
-    getDonations().map((d) => (d.id === id ? { ...d, ...dados, quantity: Number(dados.quantity) } : d)),
-  );
+  const atualizacoes = { ...dados };
+  if (Object.prototype.hasOwnProperty.call(atualizacoes, "quantity")) {
+    atualizacoes.quantity = Math.max(1, Math.floor(Number(atualizacoes.quantity) || 1));
+  }
+  saveDonations(getDonations().map((d) => (d.id === id ? { ...d, ...atualizacoes } : d)));
+  if (typeof window !== "undefined") {
+    const alvo = getDonations().find((d) => d.id === id);
+    window.dispatchEvent(
+      new CustomEvent("ca:doacoes-atualizadas", {
+        detail: { id, quantidade: alvo ? alvo.quantity : undefined },
+      }),
+    );
+  }
+}
+
+export function ajustarQuantidade(id, valor) {
+  const alvo = doacaoPorId(id);
+  if (!alvo) return null;
+  const quantidade = Math.max(1, Math.floor(Number(valor) || 1));
+  atualizarDoacao(id, { quantity: quantidade });
+  return quantidade;
 }
 
 export function cancelarDoacao(id) {
@@ -93,9 +111,7 @@ export function podeSolicitar(doacao, institutionId) {
   if (doacao.status !== "Disponível") return "Esta doação não está mais disponível.";
   const jaSolicitou = getRequests().some(
     (r) =>
-      r.donationId === doacao.id &&
-      r.institutionId === institutionId &&
-      r.status !== "Cancelada",
+      r.donationId === doacao.id && r.institutionId === institutionId && r.status !== "Cancelada",
   );
   if (jaSolicitou) return "Você já solicitou esta doação.";
   return null;
@@ -121,7 +137,8 @@ export function aprovarSolicitacao(requestId) {
   if (!alvo) return;
   saveRequests(
     requests.map((r) => {
-      if (r.id === requestId) return { ...r, status: "Aprovada", approvedAt: new Date().toISOString() };
+      if (r.id === requestId)
+        return { ...r, status: "Aprovada", approvedAt: new Date().toISOString() };
       // As demais solicitações da mesma doação são recusadas.
       if (r.donationId === alvo.donationId && r.status === "Aguardando")
         return { ...r, status: "Recusada" };
@@ -147,9 +164,7 @@ export function concluirSolicitacao(requestId) {
   if (!alvo) return;
   saveRequests(
     requests.map((r) =>
-      r.id === requestId
-        ? { ...r, status: "Concluída", completedAt: new Date().toISOString() }
-        : r,
+      r.id === requestId ? { ...r, status: "Concluída", completedAt: new Date().toISOString() } : r,
     ),
   );
   saveDonations(

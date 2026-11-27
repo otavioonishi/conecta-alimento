@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Protected from "../components/Protected";
 import { EmptyState, StatusBadge } from "../components/ui-basics";
+import QuantityControl from "../components/QuantityControl";
 import {
   aprovarSolicitacao,
   concluirSolicitacao,
@@ -10,6 +11,7 @@ import {
   doacaoPorId,
   recusarSolicitacao,
   solicitacoesDoDoador,
+  ajustarQuantidade,
 } from "../services/donationService";
 import { formatarData } from "../utils/format";
 
@@ -53,6 +55,13 @@ function Solicitacoes({ perfil }) {
     toast.success("Doação concluída. Obrigado por doar!");
   }
 
+  function mudarQuantidade(d, valor) {
+    const quantidade = ajustarQuantidade(d.id, valor);
+    if (quantidade === null) return;
+    carregar();
+    toast.success("Quantidade atualizada.");
+  }
+
   const pendentes = lista.filter((r) => r.status !== "Concluída");
 
   return (
@@ -75,37 +84,48 @@ function Solicitacoes({ perfil }) {
             const doacao = doacaoPorId(r.donationId);
             const inst = dadosDaInstituicao(r.institutionId);
             return (
-              <div key={r.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-foreground">{inst ? inst.institutionName : "Instituição"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {doacao ? `${doacao.foodName} — ${doacao.quantity} ${doacao.unit}` : "Doação removida"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Solicitado em {formatarData(r.createdAt)} • Telefone: {inst ? inst.phone : "-"}
-                    </p>
+              <div key={r.id} className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="flex-1 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">{inst ? inst.institutionName : "Instituição"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {doacao ? doacao.foodName : "Doação removida"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Solicitado em {formatarData(r.createdAt)} • Telefone: {inst ? inst.phone : "-"}
+                      </p>
+                    </div>
+                    <StatusBadge status={r.status} />
                   </div>
-                  <StatusBadge status={r.status} />
-                </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {r.status === "Aguardando" ? (
-                    <>
-                      <button onClick={() => aceitar(r.id)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-                        Aceitar
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {r.status === "Aguardando" ? (
+                      <>
+                        <button onClick={() => aceitar(r.id)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                          Aceitar
+                        </button>
+                        <button onClick={() => recusar(r.id)} className="rounded-lg border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
+                          Recusar
+                        </button>
+                      </>
+                    ) : null}
+                    {r.status === "Aprovada" ? (
+                      <button onClick={() => concluir(r.id)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                        Marcar como retirado
                       </button>
-                      <button onClick={() => recusar(r.id)} className="rounded-lg border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
-                        Recusar
-                      </button>
-                    </>
-                  ) : null}
-                  {r.status === "Aprovada" ? (
-                    <button onClick={() => concluir(r.id)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-                      Marcar como retirado
-                    </button>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
+                {doacao ? (
+                  <QuantityControl
+                    value={doacao.quantity}
+                    unit={doacao.unit}
+                    onChange={(v) => mudarQuantidade(doacao, v)}
+                  />
+                ) : (
+                  <div className="hidden w-36 shrink-0 sm:block" />
+                )}
               </div>
             );
           })}

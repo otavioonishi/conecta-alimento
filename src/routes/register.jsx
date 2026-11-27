@@ -6,7 +6,32 @@ import Layout from "../components/Layout";
 import { Campo, inputClass } from "../components/ui-basics";
 import { cadastrarDoador, cadastrarInstituicao } from "../services/authService";
 import { seedInicial } from "../services/storageService";
-import { emailValido, TIPOS_ESTABELECIMENTO, TIPOS_INSTITUICAO } from "../utils/format";
+import {
+  CATEGORIAS,
+  TIPOS_ESTABELECIMENTO,
+  TIPOS_INSTITUICAO,
+  emailValido,
+} from "../utils/format";
+
+const CHAVE_CATEGORIA = "ca_donor_categoria";
+
+function salvarCategoria(categoria) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(CHAVE_CATEGORIA, categoria);
+  } catch {
+    // sessionStorage pode estar indisponível em modo privado; não quebra o cadastro.
+  }
+}
+
+function limparCategoria() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(CHAVE_CATEGORIA);
+  } catch {
+    // Ignorado: a pré-seleção é apenas um conveniência.
+  }
+}
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -29,10 +54,22 @@ export const Route = createFileRoute("/register")({
 function RegisterPage() {
   const navigate = useNavigate();
   const [tipo, setTipo] = useState(null);
+  const [categoria, setCategoria] = useState("");
 
   useEffect(() => {
     seedInicial();
   }, []);
+
+  function voltarParaTipo() {
+    setTipo(null);
+    setCategoria("");
+    limparCategoria();
+  }
+
+  function selecionarCategoria(cat) {
+    salvarCategoria(cat);
+    setCategoria(cat);
+  }
 
   if (!tipo) {
     return (
@@ -44,6 +81,7 @@ function RegisterPage() {
           <p className="mt-2 text-muted-foreground">Escolha o tipo de conta para continuar.</p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <button
+              type="button"
               onClick={() => setTipo("donor")}
               className="rounded-2xl border border-border bg-card p-6 text-left shadow-sm transition hover:border-primary"
             >
@@ -56,6 +94,7 @@ function RegisterPage() {
               </p>
             </button>
             <button
+              type="button"
               onClick={() => setTipo("institution")}
               className="rounded-2xl border border-border bg-card p-6 text-left shadow-sm transition hover:border-primary"
             >
@@ -79,17 +118,42 @@ function RegisterPage() {
     );
   }
 
+  if (tipo === "donor" && !categoria) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-3xl py-8">
+          <button
+            type="button"
+            onClick={voltarParaTipo}
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            ← Escolher outro tipo de conta
+          </button>
+          <SelecaoCategoriaDoador onSelecionar={selecionarCategoria} />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="mx-auto max-w-2xl py-8">
-        <button onClick={() => setTipo(null)} className="text-sm text-muted-foreground hover:underline">
+        <button
+          type="button"
+          onClick={voltarParaTipo}
+          className="text-sm text-muted-foreground hover:underline"
+        >
           ← Escolher outro tipo de conta
         </button>
         <h1 className="mt-3 text-2xl font-semibold text-foreground">
           {tipo === "donor" ? "Cadastro de estabelecimento doador" : "Cadastro de instituição social"}
         </h1>
         {tipo === "donor" ? (
-          <FormularioDoador navigate={navigate} />
+          <FormularioDoador
+            navigate={navigate}
+            categoria={categoria}
+            onVoltar={() => setCategoria("")}
+          />
         ) : (
           <FormularioInstituicao navigate={navigate} />
         )}
@@ -98,13 +162,58 @@ function RegisterPage() {
   );
 }
 
+function SelecaoCategoriaDoador({ onSelecionar }) {
+  return (
+    <div className="mt-3 space-y-5">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">
+          O que você pretende doar?
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Escolha uma categoria — ela já virá selecionada na sua primeira doação.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {CATEGORIAS.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => onSelecionar(cat)}
+            className="rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-green-accent/60 hover:bg-green-mist/40 hover:shadow-md"
+          >
+            <span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-green-soft text-xl text-green-deep">
+              {emojiCategoria(cat)}
+            </span>
+            <span className="block text-sm font-medium text-foreground">{cat}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function emojiCategoria(categoria) {
+  const mapa = {
+    Frutas: "🍎",
+    Verduras: "🥬",
+    Legumes: "🥕",
+    Padaria: "🥖",
+    "Refeições prontas": "🍱",
+    "Alimentos não perecíveis": "🥫",
+    Laticínios: "🥛",
+    "Brinquedos para crianças": "🧸",
+    "Outros / o que quiser": "🎁",
+  };
+  return mapa[categoria] || "📦";
+}
+
 function useFormulario(inicial) {
   const [dados, setDados] = useState(inicial);
   const alterar = (campo) => (e) => setDados({ ...dados, [campo]: e.target.value });
   return [dados, alterar];
 }
 
-function FormularioDoador({ navigate }) {
+function FormularioDoador({ navigate, categoria, onVoltar }) {
   const [dados, alterar] = useFormulario({
     name: "",
     businessName: "",
@@ -134,48 +243,62 @@ function FormularioDoador({ navigate }) {
   }
 
   return (
-    <form onSubmit={enviar} className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Campo label="Nome do responsável" obrigatorio>
-          <input className={inputClass} value={dados.name} onChange={alterar("name")} />
-        </Campo>
-        <Campo label="Nome do estabelecimento" obrigatorio>
-          <input className={inputClass} value={dados.businessName} onChange={alterar("businessName")} />
-        </Campo>
-        <Campo label="CNPJ (opcional)">
-          <input className={inputClass} value={dados.cnpj} onChange={alterar("cnpj")} />
-        </Campo>
-        <Campo label="Tipo de estabelecimento" obrigatorio>
-          <select className={inputClass} value={dados.businessType} onChange={alterar("businessType")}>
-            {TIPOS_ESTABELECIMENTO.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-        </Campo>
-        <Campo label="E-mail" obrigatorio>
-          <input type="email" className={inputClass} value={dados.email} onChange={alterar("email")} />
-        </Campo>
-        <Campo label="Telefone" obrigatorio>
-          <input className={inputClass} value={dados.phone} onChange={alterar("phone")} />
-        </Campo>
-        <Campo label="Senha" obrigatorio>
-          <input type="password" className={inputClass} value={dados.password} onChange={alterar("password")} />
-        </Campo>
-        <Campo label="Endereço" obrigatorio>
-          <input className={inputClass} value={dados.address} onChange={alterar("address")} />
-        </Campo>
-        <Campo label="Cidade" obrigatorio>
-          <input className={inputClass} value={dados.city} onChange={alterar("city")} />
-        </Campo>
-        <Campo label="Estado" obrigatorio>
-          <input className={inputClass} value={dados.state} onChange={alterar("state")} maxLength={2} />
-        </Campo>
+    <div className="space-y-4">
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onVoltar}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+        >
+          ← Escolher outro tipo de doação
+        </button>
+        <span className="rounded-full bg-green-soft px-3 py-1 text-xs font-medium text-green-deep">
+          {categoria}
+        </span>
       </div>
-      {erro ? <p className="text-sm text-destructive">{erro}</p> : null}
-      <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
-        Criar conta
-      </button>
-    </form>
+      <form onSubmit={enviar} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Campo label="Nome do responsável" obrigatorio>
+            <input className={inputClass} value={dados.name} onChange={alterar("name")} />
+          </Campo>
+          <Campo label="Nome do estabelecimento" obrigatorio>
+            <input className={inputClass} value={dados.businessName} onChange={alterar("businessName")} />
+          </Campo>
+          <Campo label="CNPJ (opcional)">
+            <input className={inputClass} value={dados.cnpj} onChange={alterar("cnpj")} />
+          </Campo>
+          <Campo label="Tipo de estabelecimento" obrigatorio>
+            <select className={inputClass} value={dados.businessType} onChange={alterar("businessType")}>
+              {TIPOS_ESTABELECIMENTO.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="E-mail" obrigatorio>
+            <input type="email" className={inputClass} value={dados.email} onChange={alterar("email")} />
+          </Campo>
+          <Campo label="Telefone" obrigatorio>
+            <input className={inputClass} value={dados.phone} onChange={alterar("phone")} />
+          </Campo>
+          <Campo label="Senha" obrigatorio>
+            <input type="password" className={inputClass} value={dados.password} onChange={alterar("password")} />
+          </Campo>
+          <Campo label="Endereço" obrigatorio>
+            <input className={inputClass} value={dados.address} onChange={alterar("address")} />
+          </Campo>
+          <Campo label="Cidade" obrigatorio>
+            <input className={inputClass} value={dados.city} onChange={alterar("city")} />
+          </Campo>
+          <Campo label="Estado" obrigatorio>
+            <input className={inputClass} value={dados.state} onChange={alterar("state")} maxLength={2} />
+          </Campo>
+        </div>
+        {erro ? <p className="mt-4 text-sm text-destructive">{erro}</p> : null}
+        <button className="mt-6 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+          Criar conta
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -209,7 +332,7 @@ function FormularioInstituicao({ navigate }) {
   }
 
   return (
-    <form onSubmit={enviar} className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <form onSubmit={enviar} className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="grid gap-4 sm:grid-cols-2">
         <Campo label="Nome da instituição" obrigatorio>
           <input className={inputClass} value={dados.institutionName} onChange={alterar("institutionName")} />
@@ -244,10 +367,10 @@ function FormularioInstituicao({ navigate }) {
         </Campo>
       </div>
       <Campo label="Descrição breve">
-        <textarea rows={3} className={inputClass} value={dados.description} onChange={alterar("description")} />
+        <textarea rows={3} className={`mt-4 ${inputClass}`} value={dados.description} onChange={alterar("description")} />
       </Campo>
-      {erro ? <p className="text-sm text-destructive">{erro}</p> : null}
-      <button className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+      {erro ? <p className="mt-4 text-sm text-destructive">{erro}</p> : null}
+      <button className="mt-6 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
         Criar conta
       </button>
     </form>

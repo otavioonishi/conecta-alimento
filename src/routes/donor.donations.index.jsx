@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Protected from "../components/Protected";
 import { EmptyState, StatusBadge } from "../components/ui-basics";
-import { doacoesDoDoador, cancelarDoacao } from "../services/donationService";
+import QuantityControl from "../components/QuantityControl";
+import { doacoesDoDoador, cancelarDoacao, ajustarQuantidade } from "../services/donationService";
 import { formatarData } from "../utils/format";
 
 export const Route = createFileRoute("/donor/donations/")({
@@ -32,6 +33,15 @@ function MinhasDoacoes({ perfil }) {
     toast.success("Doação cancelada.");
   }
 
+  function mudarQuantidade(d, valor) {
+    const quantidade = ajustarQuantidade(d.id, valor);
+    if (quantidade === null) return;
+    setDoacoes((atual) =>
+      atual.map((item) => (item.id === d.id ? { ...item, quantity: quantidade } : item)),
+    );
+    toast.success("Quantidade atualizada.");
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -52,42 +62,47 @@ function MinhasDoacoes({ perfil }) {
           }
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-3">
           {doacoes.map((d) => (
-            <div key={d.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-foreground">{d.foodName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {d.quantity} {d.unit} • {d.category}
-                  </p>
+            <div key={d.id} className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="flex-1 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-foreground">{d.foodName}</p>
+                    <p className="text-sm text-muted-foreground">{d.category}</p>
+                  </div>
+                  <StatusBadge status={d.status} />
                 </div>
-                <StatusBadge status={d.status} />
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Validade: {formatarData(d.expirationDate)} • Retirada até {d.pickupDeadline}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {d.address} — {d.city}
-              </p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Validade: {formatarData(d.expirationDate)} • Retirada até {d.pickupDeadline}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {d.address} — {d.city}
+                </p>
 
-              {d.status === "Disponível" ? (
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    to="/donor/donations/$id/edit"
-                    params={{ id: d.id }}
-                    className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
-                  >
-                    Editar
-                  </Link>
-                  <button
-                    onClick={() => cancelar(d.id)}
-                    className="rounded-lg border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : null}
+                {d.status === "Disponível" ? (
+                  <div className="mt-4 flex gap-2">
+                    <Link
+                      to="/donor/donations/$id/edit"
+                      params={{ id: d.id }}
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                    >
+                      Editar
+                    </Link>
+                    <button
+                      onClick={() => cancelar(d.id)}
+                      className="rounded-lg border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <QuantityControl
+                value={d.quantity}
+                unit={d.unit}
+                onChange={(v) => mudarQuantidade(d, v)}
+              />
             </div>
           ))}
         </div>

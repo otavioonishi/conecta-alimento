@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Scale, Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getDonations,
@@ -7,13 +7,20 @@ import {
   getRequests,
   saveRequests,
 } from "../../services/storageService";
-import { atualizarDoacao, cancelarDoacao } from "../../services/donationService";
-import { StatusBadge } from "../../components/ui-basics";
+import {
+  atualizarDoacao,
+  ajustarQuantidade,
+  cancelarDoacao,
+  nomeDoEstabelecimento,
+} from "../../services/donationService";
+import QuantityStepper from "../QuantityStepper";
+import { StatusBadge } from "../ui-basics";
 import { formatarData } from "../../utils/format";
 
 export default function AdminDonations() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [, forcarRender] = useState(0);
 
   const doacoes = getDonations().filter((d) => {
     const termo = busca.toLowerCase();
@@ -24,6 +31,13 @@ export default function AdminDonations() {
     const matchStatus = filtroStatus === "todos" || d.status === filtroStatus;
     return matchBusca && matchStatus;
   });
+
+  function mudarQuantidade(d, valor) {
+    const quantidade = ajustarQuantidade(d.id, valor);
+    if (quantidade === null) return;
+    forcarRender((v) => v + 1);
+    toast.success("Quantidade atualizada.");
+  }
 
   function remover(id) {
     const d = getDonations().find((x) => x.id === id);
@@ -40,21 +54,23 @@ export default function AdminDonations() {
         r.donationId === id && r.status === "Aguardando" ? { ...r, status: "Recusada" } : r,
       ),
     );
+    forcarRender((v) => v + 1);
     toast.success("Doação removida.");
   }
 
   function mudarStatus(id, novoStatus) {
     const alvo = getDonations().find((d) => d.id === id);
-    if (!alvo) return;
-    if (alvo.status === novoStatus) return;
+    if (!alvo || alvo.status === novoStatus) return;
     atualizarDoacao(id, { status: novoStatus });
     if (novoStatus === "Cancelada") {
       cancelarDoacao(id);
     }
+    forcarRender((v) => v + 1);
     toast.success(`Doação marcada como ${novoStatus}.`);
   }
 
   const statusOpcoes = [
+    "todos",
     "Disponível",
     "Reservada",
     "Aprovada",
@@ -76,18 +92,18 @@ export default function AdminDonations() {
               className="w-full rounded-xl border border-input bg-background pl-9 pr-3 py-2.5 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
-          <div className="flex gap-2 sm:max-w-xs">
+          <div className="flex flex-wrap gap-2">
             {statusOpcoes.map((s) => (
               <button
                 key={s}
                 onClick={() => setFiltroStatus(s)}
-                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   filtroStatus === s
                     ? "bg-secondary text-foreground"
                     : "border border-border text-muted-foreground hover:bg-secondary"
                 }`}
               >
-                {s}
+                {s === "todos" ? "Todas" : s}
               </button>
             ))}
           </div>
@@ -95,12 +111,13 @@ export default function AdminDonations() {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="border-b border-border text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-medium">Alimento</th>
               <th className="px-4 py-3 font-medium">Estabelecimento</th>
               <th className="px-4 py-3 font-medium">Cidade</th>
+              <th className="px-4 py-3 font-medium">Quantidade</th>
               <th className="px-4 py-3 font-medium">Validade</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Criada em</th>
@@ -113,14 +130,23 @@ export default function AdminDonations() {
                 key={d.id}
                 className="border-b border-border last:border-0 hover:bg-green-mist/30"
               >
-                <td className="px-4 py-3 text-foreground">
-                  {d.foodName}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    ({d.quantity} {d.unit})
-                  </span>
+                <td className="px-4 py-3 font-medium text-foreground">{d.foodName}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {nomeDoEstabelecimento(d.donorId)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{d.city}</td>
-                <td className="px-4 py-3 text-muted-foreground">{d.address}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-28 shrink-0">
+                      <QuantityStepper
+                        compact
+                        value={d.quantity}
+                        onChange={(v) => mudarQuantidade(d, v)}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{d.unit}</span>
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {formatarData(d.expirationDate)}
                 </td>
@@ -130,7 +156,7 @@ export default function AdminDonations() {
                 <td className="px-4 py-3 text-muted-foreground">{formatarData(d.createdAt)}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1.5">
-                    {statusOpcoes.map((s) => (
+                    {statusOpcoes.slice(1).map((s) => (
                       <button
                         key={s}
                         onClick={() => mudarStatus(d.id, s)}
@@ -155,7 +181,7 @@ export default function AdminDonations() {
             ))}
             {doacoes.length === 0 && (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan="8" className="px-4 py-8 text-center text-muted-foreground">
                   Nenhuma doação encontrada.
                 </td>
               </tr>

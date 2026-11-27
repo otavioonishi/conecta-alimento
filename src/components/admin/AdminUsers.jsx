@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Search, HandHeart, Building2, ShieldCheck, Eye } from "lucide-react";
-import Protected from "../../components/Protected";
 import { Card } from "../../components/ui-basics";
 import { getUsers, saveUsers } from "../../services/storageService";
 import { usuarioLogado } from "../../services/authService";
